@@ -1,6 +1,10 @@
 import streamlit as st
+import json
+from pathlib import Path
 
+from cesium_viewer import render_cesium_viewer
 from page_definitions import PAGES
+from pipeline import PipelineConfig, run_pipeline
 from schema import Page
 from state import (
     FILTER_OPTIONS,
@@ -66,18 +70,49 @@ def render_sidebar() -> Page:
     st.sidebar.divider()
     st.sidebar.subheader("State")
 
-    if st.sidebar.button("Export JSON", use_container_width=True):
-        st.session_state["_export_payload"] = export_state(PAGES)
+    st.sidebar.subheader("Pipeline")
+    db_name = st.sidebar.text_input("Database name", value="mock_db")
+    repetition_count = st.sidebar.number_input("Repetition count", min_value=1, max_value=500, value=4)
+    dry_run = st.sidebar.checkbox("Dry run (no CZML build)", value=False)
+    enable_cache = st.sidebar.checkbox("Use cache", value=True)
 
-    with st.sidebar.expander("Import JSON"):
-        json_input = st.text_area("Paste exported JSON", height=200, label_visibility="collapsed")
-        if st.button("Load state", use_container_width=True):
-            try:
-                import_state(json_input, PAGES)
-                st.success("State loaded successfully.")
-                st.rerun()
-            except (ValueError, KeyError) as e:
-                st.error(f"Invalid JSON: {e}")
+    if st.sidebar.button("Run pipeline", use_container_width=True):
+        payload = json.loads(export_state(PAGES))
+        config = PipelineConfig(
+            db_name=db_name,
+            repetition_count=int(repetition_count),
+            artifacts_dir=Path("artifacts"),
+            cache_enabled=enable_cache,
+        )
+        result = run_pipeline(selection_payload=payload, config=config, dry_run=dry_run)
+        st.session_state["_pipeline_result"] = {
+            "run_id": result.run_id,
+            "created_at": result.created_at,
+            "db_name": result.db_name,
+            "repetition_count": result.repetition_count,
+            "used_cache": result.used_cache,
+            "dry_run": result.dry_run,
+            "selection_hash": result.selection_hash,
+            "estimated_row_count": result.estimated_row_count,
+            "artifact_dir": result.artifact_dir,
+            "czml_path": result.czml_path,
+            "validation_errors": list(result.validation_errors),
+            "sql_text": result.sql_text,
+            "sql_params": result.sql_params,
+        }
+
+    # if st.sidebar.button("Export JSON", use_container_width=True):
+    #     st.session_state["_export_payload"] = export_state(PAGES)
+
+    # with st.sidebar.expander("Import JSON"):
+    #     json_input = st.text_area("Paste exported JSON", height=200, label_visibility="collapsed")
+    #     if st.button("Load state", use_container_width=True):
+    #         try:
+    #             import_state(json_input, PAGES)
+    #             st.success("State loaded successfully.")
+    #             st.rerun()
+    #         except (ValueError, KeyError) as e:
+    #             st.error(f"Invalid JSON: {e}")
 
     return current_page
 
@@ -99,6 +134,22 @@ def main() -> None:
         st.divider()
         st.subheader("Exported JSON")
         st.code(st.session_state.pop("_export_payload"), language="json")
+
+    if "_pipeline_result" in st.session_state:
+        pipeline_result = st.session_state["_pipeline_result"]
+        st.divider()
+        st.subheader("Pipeline Result")
+        st.json(pipeline_result)
+        st.caption("Compiled SQL")
+        st.code(pipeline_result["sql_text"], language="sql")
+
+        if pipeline_result["czml_path"]:
+            st.divider()
+            st.subheader("Cesium Viewer")
+            cesium_html = render_cesium_viewer(pipeline_result["czml_path"], height=800)
+            st.html(cesium_html)
+        else:
+            st.info("No CZML output (dry-run mode).")
 
 
 if __name__ == "__main__":

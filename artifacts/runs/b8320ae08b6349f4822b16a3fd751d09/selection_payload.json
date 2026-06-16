@@ -1,0 +1,68 @@
+{
+  "Network": {
+    "Firewall": {
+      "filter": "all",
+      "selections": [
+        "allow",
+        "log"
+      ]
+    },
+    "VPN": {
+      "filter": "none",
+      "selections": [
+        "full-tunnel",
+        "disabled"
+      ]
+    },
+    "DNS": {
+      "filter": "red",
+      "selections": [
+        "external",
+        "both"
+      ]
+    },
+    "Proxy": {
+      "filter": "red",
+      "selections": [
+        "http",
+        "https"
+      ]
+    }
+  },
+  "Storage": {
+    "Primary Disk": {
+      "filter": "all",
+      "selections": []
+    },
+    "Backup": {
+      "filter": "all",
+      "selections": []
+    },
+    "Archive": {
+      "filter": "all",
+      "selections": []
+    },
+    "Encryption": {
+      "filter": "all",
+      "selections": []
+    },
+    "Compression": {
+      "filter": "all",
+      "selections": []
+    }
+  },
+  "Compute": {
+    "CPU Profile": {
+      "filter": "all",
+      "selections": []
+    },
+    "Memory Mode": {
+      "filter": "all",
+      "selections": []
+    },
+    "GPU": {
+      "filter": "all",
+      "selections": []
+    }
+  }
+}

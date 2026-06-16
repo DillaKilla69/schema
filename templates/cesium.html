@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cesium Viewer</title>
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.120/Build/Cesium/Cesium.js"></script>
+    <link href="https://cesium.com/downloads/cesiumjs/releases/1.120/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f5f5f5;
+            overflow: hidden;
+            height: 100vh;
+        }
+        #cesium-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        .controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 10px 15px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            font-size: 12px;
+            max-width: 300px;
+        }
+        .controls h3 {
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #333;
+        }
+        .control-group {
+            margin-bottom: 8px;
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        .control-group button {
+            padding: 6px 12px;
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background-color 0.2s;
+        }
+        .control-group button:hover {
+            background-color: #0052a3;
+        }
+        .control-group button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .control-group input[type="range"] {
+            flex: 1;
+            height: 4px;
+        }
+        .time-display {
+            font-size: 11px;
+            color: #666;
+            margin-top: 4px;
+            font-family: "Courier New", monospace;
+        }
+        .status {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            color: #666;
+            z-index: 1000;
+        }
+        .error-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 100, 100, 0.95);
+            color: white;
+            padding: 20px;
+            border-radius: 4px;
+            max-width: 400px;
+            text-align: center;
+            z-index: 2000;
+        }
+    </style>
+</head>
+<body>
+    <div id="cesium-container"></div>
+    
+    <div class="controls">
+        <h3>Playback Control</h3>
+        <div class="control-group">
+            <button id="play-btn" onclick="togglePlayback()">Play</button>
+            <button id="pause-btn" onclick="pausePlayback()" disabled>Pause</button>
+        </div>
+        <div class="control-group">
+            <label for="speed-slider">Speed:</label>
+            <input type="range" id="speed-slider" min="0.1" max="5" step="0.1" value="1" onchange="setPlaybackSpeed(this.value)">
+            <span id="speed-label">1.0x</span>
+        </div>
+        <div class="time-display" id="time-display">--:--:--</div>
+    </div>
+
+    <div class="status" id="status">Loading...</div>
+    <div class="error-message" id="error-message" style="display: none;"></div>
+
+    <script>
+        // Wait for both Cesium and CZML_DATA to be available
+        const czmlData = window.CZML_DATA || null;
+        let viewer = null;
+        let isPlaying = false;
+        let playbackSpeed = 1.0;
+
+        function initViewer() {
+            if (!window.Cesium) {
+                console.log("Cesium not loaded yet, retrying...");
+                setTimeout(initViewer, 100);
+                return;
+            }
+
+            try {
+                console.log("Initializing Cesium viewer");
+                console.log("CZML data available:", !!czmlData);
+                
+                viewer = new Cesium.Viewer("cesium-container", {
+                    homeButton: true,
+                    sceneModePicker: true,
+                    baseLayerPicker: true,
+                    geocoder: false,
+                    navigationInstructionsInitiallyVisible: false,
+                    infoBox: false,
+                    selectionIndicator: true,
+                });
+
+                viewer.camera.setView({
+                    destination: Cesium.Cartesian3.fromDegrees(-110, 35, 1500000),
+                });
+
+                viewer.scene.globe.enableLighting = false;
+
+                if (czmlData) {
+                    loadCzmlData();
+                } else {
+                    showError("No CZML data provided. Check console.");
+                    console.log("czmlData is:", czmlData);
+                }
+            } catch (error) {
+                showError(`Failed to initialize viewer: ${error.message}`);
+                console.error(error);
+            }
+        }
+
+        function loadCzmlData() {
+            try {
+                console.log("Loading CZML data, packets:", czmlData.length);
+                
+                Cesium.CzmlDataSource.load(czmlData)
+                    .then((dataSource) => {
+                        console.log("CZML loaded, entities:", dataSource.entities.values.length);
+                        viewer.dataSources.add(dataSource);
+                        updateStatus(`Loaded ${czmlData.length} CZML packets`);
+
+                        if (dataSource.entities.values.length > 0) {
+                            viewer.zoomTo(dataSource, new Cesium.HeadingPitchRange(0, -45, 500000));
+                        }
+
+                        const docEntity = dataSource.entities.getById("document");
+                        if (docEntity && docEntity.availability) {
+                            viewer.clock.startTime = docEntity.availability.start.clone();
+                            viewer.clock.stopTime = docEntity.availability.stop.clone();
+                            viewer.clock.currentTime = docEntity.availability.start.clone();
+                            viewer.timeline.zoomTo(docEntity.availability.start, docEntity.availability.stop);
+                        }
+                    })
+                    .catch((error) => {
+                        console.error("CZML load failed:", error);
+                        showError(`Failed to load CZML: ${error.message}`);
+                    });
+            } catch (error) {
+                console.error("CZML load exception:", error);
+                showError(`Error loading CZML: ${error.message}`);
+            }
+        }
+
+        function togglePlayback() {
+            if (!isPlaying && viewer) {
+                viewer.clock.shouldAnimate = true;
+                isPlaying = true;
+                document.getElementById("play-btn").disabled = true;
+                document.getElementById("pause-btn").disabled = false;
+                updateStatus("Playing...");
+            }
+        }
+
+        function pausePlayback() {
+            if (isPlaying && viewer) {
+                viewer.clock.shouldAnimate = false;
+                isPlaying = false;
+                document.getElementById("play-btn").disabled = false;
+                document.getElementById("pause-btn").disabled = true;
+                updateStatus("Paused");
+            }
+        }
+
+        function setPlaybackSpeed(speed) {
+            playbackSpeed = parseFloat(speed);
+            if (viewer) {
+                viewer.clock.multiplier = playbackSpeed;
+            }
+            document.getElementById("speed-label").textContent = playbackSpeed.toFixed(1) + "x";
+            updateStatus(`Speed: ${playbackSpeed.toFixed(1)}x`);
+        }
+
+        function updateTimeDisplay() {
+            if (viewer && viewer.clock.currentTime) {
+                const iso = viewer.clock.currentTime.toString();
+                document.getElementById("time-display").textContent = iso.substring(0, 19).replace("T", " ");
+            }
+        }
+
+        function updateStatus(message) {
+            document.getElementById("status").textContent = message;
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById("error-message");
+            errorEl.textContent = message;
+            errorEl.style.display = "block";
+            console.error(message);
+        }
+
+        setTimeout(initViewer, 500);  // Give Cesium more time to load
+        setInterval(updateTimeDisplay, 100);
+    </script>
+</body>
+</html>

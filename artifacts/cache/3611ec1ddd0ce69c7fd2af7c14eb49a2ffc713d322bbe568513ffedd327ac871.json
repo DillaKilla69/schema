@@ -1,0 +1,15 @@
+{
+  "run_id": "786a282bba234985a4bc777825f32dac",
+  "created_at": "2026-06-16T03:39:24.545277Z",
+  "db_name": "mock_db",
+  "repetition_count": 3,
+  "selection_hash": "3611ec1ddd0ce69c7fd2af7c14eb49a2ffc713d322bbe568513ffedd327ac871",
+  "dry_run": false,
+  "validation_errors": [],
+  "sql_text": "SELECT\n            e.entity_id,\n            e.entity_name,\n            p.ts,\n            p.lat,\n            p.lon,\n            p.height_m,\n            p.velocity,\n            p.heading_deg,\n            e.category,\n            e.status\n        FROM mock_entities e\n        JOIN mock_entity_points p ON p.entity_id = e.entity_id\n        WHERE 1 = 1\n        ORDER BY e.entity_id, p.ts\n        LIMIT 750",
+  "sql_params": {},
+  "estimated_row_count": 100,
+  "czml_path": "C:\\Users\\donju\\OneDrive\\Desktop\\Data_Stuff\\streamlit_json\\artifacts\\runs\\786a282bba234985a4bc777825f32dac\\output.czml.json",
+  "artifact_dir": "C:\\Users\\donju\\OneDrive\\Desktop\\Data_Stuff\\streamlit_json\\artifacts\\runs\\786a282bba234985a4bc777825f32dac",
+  "used_cache": false
+}

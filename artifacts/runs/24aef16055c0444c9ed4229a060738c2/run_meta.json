@@ -1,0 +1,10 @@
+{
+  "run_id": "24aef16055c0444c9ed4229a060738c2",
+  "created_at": "2026-06-16T03:39:19.739473Z",
+  "db_name": "mock_db",
+  "repetition_count": 3,
+  "selection_hash": "3611ec1ddd0ce69c7fd2af7c14eb49a2ffc713d322bbe568513ffedd327ac871",
+  "dry_run": true,
+  "estimated_row_count": 100,
+  "validation_errors": []
+}

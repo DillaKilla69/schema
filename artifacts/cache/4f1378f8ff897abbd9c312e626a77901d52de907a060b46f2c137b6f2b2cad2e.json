@@ -1,0 +1,27 @@
+{
+  "run_id": "77bd9282c0ac4f0f82bf37b536f49a66",
+  "created_at": "2026-06-16T04:02:00.093129Z",
+  "db_name": "mock_db",
+  "repetition_count": 4,
+  "selection_hash": "4f1378f8ff897abbd9c312e626a77901d52de907a060b46f2c137b6f2b2cad2e",
+  "dry_run": false,
+  "validation_errors": [],
+  "sql_text": "SELECT\n            e.entity_id,\n            e.entity_name,\n            p.ts,\n            p.lat,\n            p.lon,\n            p.height_m,\n            p.velocity,\n            p.heading_deg,\n            e.category,\n            e.status\n        FROM mock_entities e\n        JOIN mock_entity_points p ON p.entity_id = e.entity_id\n        WHERE 1 = 1 AND 1 = 0 AND e.status_color = :status_color_0 AND e.status_color = :status_color_1 AND (cardinality(:selected_tags::text[]) >= 0)\n        ORDER BY e.entity_id, p.ts\n        LIMIT 1000",
+  "sql_params": {
+    "status_color_0": "blue",
+    "status_color_1": "red",
+    "selected_tags": [
+      "Network:DNS:external",
+      "Network:DNS:internal",
+      "Network:Firewall:allow",
+      "Network:Firewall:deny",
+      "Network:Firewall:log",
+      "Network:Proxy:http",
+      "Network:VPN:split-tunnel"
+    ]
+  },
+  "estimated_row_count": 560,
+  "czml_path": "C:\\Users\\donju\\OneDrive\\Desktop\\Data_Stuff\\streamlit_json\\artifacts\\runs\\77bd9282c0ac4f0f82bf37b536f49a66\\output.czml.json",
+  "artifact_dir": "C:\\Users\\donju\\OneDrive\\Desktop\\Data_Stuff\\streamlit_json\\artifacts\\runs\\77bd9282c0ac4f0f82bf37b536f49a66",
+  "used_cache": false
+}

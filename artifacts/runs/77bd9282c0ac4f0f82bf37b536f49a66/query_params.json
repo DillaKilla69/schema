@@ -1,0 +1,13 @@
+{
+  "status_color_0": "blue",
+  "status_color_1": "red",
+  "selected_tags": [
+    "Network:DNS:external",
+    "Network:DNS:internal",
+    "Network:Firewall:allow",
+    "Network:Firewall:deny",
+    "Network:Firewall:log",
+    "Network:Proxy:http",
+    "Network:VPN:split-tunnel"
+  ]
+}
