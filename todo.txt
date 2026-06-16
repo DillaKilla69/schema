@@ -1,0 +1,67 @@
+STREAMLIT + CESIUM INTEGRATION TODO
+=====================================
+
+PHASE 1: Replace HTML selection UI with Streamlit
+--------------------------------------------------
+[x] Define page/row schema (schema.py, page_definitions.py)
+[x] Build state management with export/import (state.py)
+[x] Build generic renderer with 3-column layout (app.py)
+[x] Replace R Shiny frontend with Streamlit (in progress)
+[ ] Map existing HTML selection options to Streamlit widgets
+    - Identify all filter/selection controls in the old HTML page
+    - Add corresponding rows/options to page_definitions.py
+    - Verify export JSON captures all selections needed by build.py
+
+PHASE 2: Wire Streamlit to build.py
+-------------------------------------
+[ ] Add a "Run" button to the Streamlit app
+[ ] On click, call build.py via subprocess, passing DB name and
+    repetition count from Streamlit widget selections
+[ ] Surface subprocess stdout/stderr in Streamlit (st.spinner + st.error)
+[ ] Confirm build.py and cesium.py remain completely unchanged
+
+PHASE 3: Verify the Cesium HTML page
+--------------------------------------
+[ ] Open the existing HTML page source and check how Cesium is loaded:
+
+    CASE A — Cesium loaded from CDN (e.g. cesium.com/downloads/cesiumjs/...)
+    -------------------------------------------------------------------------
+    [ ] No asset serving changes needed
+    [ ] Proceed directly to Phase 4
+
+    CASE B — Cesium loaded from local relative paths (e.g. ./Build/Cesium/...)
+    ---------------------------------------------------------------------------
+    [ ] Option 1 (preferred): Replace local script/link tags with CDN equivalents
+        - CesiumJS CDN: https://cesium.com/downloads/cesiumjs/releases/<version>/Build/Cesium/
+        - Match the version already in use to avoid breaking changes
+    [ ] Option 2: Move Cesium assets into Streamlit's static files directory
+        - Place assets under .streamlit/static/
+        - Update HTML src/href paths accordingly
+        - Note: requires st.set_page_config + static file serving enabled
+
+PHASE 4: Embed Cesium viewer inside Streamlit
+----------------------------------------------
+[ ] After build.py completes, read the generated HTML file into memory
+[ ] Render it inline using st.components.v1.html(html_content, height=...)
+    - Adjust height to match the Cesium viewer's expected dimensions
+[ ] Confirm CZML (~46KB) loads correctly inside the embedded viewer
+[ ] Test that one-way data flow (build -> CZML -> viewer) works end-to-end
+
+PHASE 5: Polish and cleanup
+-----------------------------
+[ ] Remove dependency on the old standalone HTML page from user workflow
+[ ] Confirm the entire user journey lives within the Streamlit app:
+    1. Select DB and repetition count
+    2. Select visualization options (pages/rows)
+    3. Click Run
+    4. Cesium viewer appears inline with playback
+[ ] Optional: Add st.download_button to expose the raw CZML file
+[ ] Optional: Cache build output by selection signature to avoid redundant builds
+
+NOTES
+------
+- build.py and cesium.py should NOT be modified during this integration
+- CZML file size (~46KB) is small enough for full in-memory handling
+- HTML page is one-way output only — no component messaging needed
+- If HTML is not self-contained, Phase 3 Case B must be resolved before
+  Phase 4 will work inside the Streamlit iframe sandbox
