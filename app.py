@@ -2,10 +2,10 @@ import streamlit as st
 import json
 from pathlib import Path
 
-from cesium_viewer import render_cesium_viewer
 from page_definitions import PAGES
 from pipeline import PipelineConfig, run_pipeline
 from schema import Page
+from sql_conn import query_db
 from state import (
     FILTER_OPTIONS,
     filter_key,
@@ -73,7 +73,7 @@ def render_sidebar() -> Page:
     st.sidebar.subheader("Pipeline")
     db_name = st.sidebar.text_input("Database name", value="mock_db")
     repetition_count = st.sidebar.number_input("Repetition count", min_value=1, max_value=500, value=4)
-    dry_run = st.sidebar.checkbox("Dry run (no CZML build)", value=False)
+    dry_run = st.sidebar.checkbox("Dry run (no query execution)", value=False)
     enable_cache = st.sidebar.checkbox("Use cache", value=True)
 
     if st.sidebar.button("Run pipeline", use_container_width=True):
@@ -95,14 +95,14 @@ def render_sidebar() -> Page:
             "selection_hash": result.selection_hash,
             "estimated_row_count": result.estimated_row_count,
             "artifact_dir": result.artifact_dir,
-            "czml_path": result.czml_path,
             "validation_errors": list(result.validation_errors),
             "sql_text": result.sql_text,
             "sql_params": result.sql_params,
         }
+        st.dataframe(data=result)
 
-    # if st.sidebar.button("Export JSON", use_container_width=True):
-    #     st.session_state["_export_payload"] = export_state(PAGES)
+    if st.sidebar.button("Export JSON", use_container_width=True):
+        st.session_state["_export_payload"] = export_state(PAGES)
 
     # with st.sidebar.expander("Import JSON"):
     #     json_input = st.text_area("Paste exported JSON", height=200, label_visibility="collapsed")
@@ -138,18 +138,10 @@ def main() -> None:
     if "_pipeline_result" in st.session_state:
         pipeline_result = st.session_state["_pipeline_result"]
         st.divider()
-        st.subheader("Pipeline Result")
-        st.json(pipeline_result)
+        # st.subheader("Pipeline Result")
+        # st.json(pipeline_result)
         st.caption("Compiled SQL")
         st.code(pipeline_result["sql_text"], language="sql")
-
-        if pipeline_result["czml_path"]:
-            st.divider()
-            st.subheader("Cesium Viewer")
-            cesium_html = render_cesium_viewer(pipeline_result["czml_path"], height=800)
-            st.html(cesium_html)
-        else:
-            st.info("No CZML output (dry-run mode).")
 
 
 if __name__ == "__main__":

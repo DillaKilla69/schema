@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from query_plan import QueryPlan
@@ -9,7 +10,6 @@ from query_plan import QueryPlan
 @dataclass(frozen=True)
 class CompiledSQL:
     sql: str
-    estimate_sql: str
     params: dict[str, Any]
 
 
@@ -28,30 +28,10 @@ def compile_query_plan(plan: QueryPlan) -> CompiledSQL:
 
     where_sql = " AND ".join(where_parts)
 
-    sql = f"""
-        SELECT
-            e.entity_id,
-            e.entity_name,
-            p.ts,
-            p.lat,
-            p.lon,
-            p.height_m,
-            p.velocity,
-            p.heading_deg,
-            e.category,
-            e.status
-        FROM mock_entities e
-        JOIN mock_entity_points p ON p.entity_id = e.entity_id
-        WHERE {where_sql}
-        ORDER BY e.entity_id, p.ts
-        LIMIT {max(100, plan.repetition_count * 250)}
-    """.strip()
+    sql_dir = Path("sql")
+    sql_files = {
+        sql_file.stem: sql_file.read_text(encoding="utf-8")
+        for sql_file in sql_dir.glob("*.sql")
+    }
 
-    estimate_sql = f"""
-        SELECT COUNT(*)
-        FROM mock_entities e
-        JOIN mock_entity_points p ON p.entity_id = e.entity_id
-        WHERE {where_sql}
-    """.strip()
-
-    return CompiledSQL(sql=sql, estimate_sql=estimate_sql, params=params)
+    return CompiledSQL(sql=sql_files["01_entities_for_row_filter"], params=params)

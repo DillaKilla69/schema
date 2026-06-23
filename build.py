@@ -10,7 +10,7 @@ from query_plan import SelectionPayload
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Build CZML from database inputs.")
+    parser = argparse.ArgumentParser(description="Run query pipeline from database inputs.")
     parser.add_argument("db_name", help="Postgres/MySQL database name")
     parser.add_argument("repetition_count", type=int, help="Repetition count used by the legacy pipeline")
     parser.add_argument(
@@ -30,17 +30,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Compile SQL and estimate rows without generating CZML.",
+        help="Compile SQL and estimate rows without query execution.",
     )
     parser.add_argument(
         "--no-cache",
         action="store_true",
         help="Disable selection-hash cache.",
-    )
-    parser.add_argument(
-        "--output",
-        default="output.czml",
-        help="Optional path to copy generated CZML output.",
     )
     return parser.parse_args()
 
@@ -58,15 +53,6 @@ def _load_selection_payload(args: argparse.Namespace) -> SelectionPayload:
     return parsed
 
 
-def _copy_output_if_requested(result_czml_path: str | None, output_path: str) -> None:
-    if not result_czml_path:
-        return
-
-    source = Path(result_czml_path)
-    target = Path(output_path).resolve()
-    target.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
-
-
 def main() -> None:
     args = parse_args()
     payload = _load_selection_payload(args)
@@ -80,8 +66,6 @@ def main() -> None:
 
     result = run_pipeline(selection_payload=payload, config=config, dry_run=args.dry_run)
 
-    _copy_output_if_requested(result.czml_path, args.output)
-
     summary = {
         "run_id": result.run_id,
         "created_at": result.created_at,
@@ -90,7 +74,6 @@ def main() -> None:
         "selection_hash": result.selection_hash,
         "estimated_row_count": result.estimated_row_count,
         "artifact_dir": result.artifact_dir,
-        "czml_path": result.czml_path,
         "validation_errors": list(result.validation_errors),
     }
     print(json.dumps(summary, indent=2))
